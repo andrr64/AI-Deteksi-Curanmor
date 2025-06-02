@@ -1,0 +1,16 @@
+*__pycache__
+*.conda
+*.ipynb
+*faces
+*videos
+*weights
+*.jpg
+*.png
+*.jpeg
+*.mp4
+models
+data
+convert.py
+sysdata
+*COCO*
+flowchart
