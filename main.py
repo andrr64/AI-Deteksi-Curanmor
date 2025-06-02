@@ -17,6 +17,7 @@ from modules.face_recognizer import FaceRecognizer
 from modules.lp_recognizer import LPRecognizer
 from modules.cv2_draw import draw_rect, draw_text
 from modules.geometry import is_inside, intersection, transform_bbox
+from modules.system_online import SistemManajemenKendaraan, ACTIVE, INACTIVE, THEFT
 
 VERBOSE = False
 MALAM = False
@@ -34,12 +35,13 @@ face_recognizer = FaceRecognizer(ctx_id=0)
 paddle_ocr = PaddleOCR(use_angle_cls=True, lang='en')
 
 pendeteksi_kendaraan = DeteksiYOLO(tipe=DeteksiYOLO.TIPE_KENDARAAN)
-deteksi_plat = DeteksiYOLO(tipe=DeteksiYOLO.TIPE_PLAT)
+pendeteksi_plat = DeteksiYOLO(tipe=DeteksiYOLO.TIPE_PLAT)
 pendeteksi_orang = DeteksiYOLO(tipe=DeteksiYOLO.TIPE_ORANG)
+sistem_manajemen_motor = SistemManajemenKendaraan()
 
 frame_count = 0
 
-cap = cv2.VideoCapture(VIDEO_SIANG[2])
+cap = cv2.VideoCapture(VIDEO_SIANG[1])
 
 if not cap.isOpened():
     exit()
@@ -132,7 +134,7 @@ while cap.isOpened():
                 if id_motor in cache_plat_nomor.keys():
                     data_motor.set_license_plate(cache_plat_nomor[id_motor])
                 else:
-                    output_deteksi_plat = deteksi_plat.detect(resized_frame, 0.5, [0])
+                    output_deteksi_plat = pendeteksi_plat.detect(resized_frame, 0.5, [0])
                     ocr_plat_success = False
                     if len(output_deteksi_plat) > 0:
                         for plat in output_deteksi_plat:
@@ -177,14 +179,22 @@ while cap.isOpened():
 
     # DETEKSI FALSE-POSITIVE MALING
     for data_motor in tracker_motor.tracked_objects.values():
-        x1,y1,x2,y2 = data_motor.get_bbox()
-        if y1 > Y_REDLINE and y2 < Y_REDLINE:
-            pass
-        if y1 < Y_REDLINE and y2 < Y_REDLINE:
-            if not data_motor.license_plate_is_none() and data_motor.license_plate in data_kemalingan:
-                data_kemalingan -= set([data_motor.license_plate])
-                print(f'[DEBUG]: DATA KEMALINGAN DIHAPUS {data_motor.license_plate}')
-    
+        if not data_motor.license_plate_is_none():
+            lp = data_motor.license_plate
+            data_status_motor = sistem_manajemen_motor.data_kendaraan[lp]
+            
+            if data_status_motor.status == INACTIVE:
+                sistem_manajemen_motor.status_menjadi_active(data_motor.license_plate)
+                
+            x1,y1,x2,y2 = data_motor.get_bbox()
+            if y1 > Y_REDLINE and y2 < Y_REDLINE:
+                pass
+            if y1 < Y_REDLINE and y2 < Y_REDLINE:
+                if not data_motor.license_plate_is_none() and data_status_motor.status == THEFT:
+                    sistem_manajemen_motor.status_menjadi_not_maling([data_motor.license_plate])
+                    print(f'[DEBUG]: DATA KEMALINGAN DIHAPUS {data_motor.license_plate}')
+
+            
     # DETEKSI MALING
     for id_motor, data_motor in tracker_motor.tracked_objects.items():
         x1m, y1m, x2m, y2m = data_motor.get_bbox()
@@ -199,14 +209,12 @@ while cap.isOpened():
                 if intersection(motor_bbox, orang_bbox, strictness=0.01):
                     list_orang_dekat_motor.append(data_orang)
                     
-            kondisi_1 = any(orang.is_unknown() for orang in list_orang_dekat_motor)
+            kondisi_1 = any(orang.is_unknown() for   orang in list_orang_dekat_motor)
             kondisi_2 = any(not orang.name in authorized_vehicles[motor_plate] for orang in list_orang_dekat_motor)
             
-            print('Kondisi orang unknown', kondisi_1)
-            print('Kondisi orang tidak di beri askes', kondisi_2)
             aktivitas_maling = kondisi_1 or kondisi_2
             if aktivitas_maling:
-                data_kemalingan.add(motor_plate)
+                sistem_manajemen_motor.status_menjadi_maling(motor_plate)
 
     # ============ PENGGAMBARAN KOTAK DAN TEKS ==========================================   
     for data_motor in tracker_motor.tracked_objects.values():
@@ -238,22 +246,22 @@ while cap.isOpened():
             YELLOW
         )
 
-        if data_kemalingan and not alarm_playing:
-            alarm_playing = True
-            alarm_sound.play(loops=-1)
-            print('KEMALINGAN')
-        elif not data_kemalingan and alarm_playing:
-            alarm_playing = False
-            alarm_sound.stop()
-        
-        cv2.imshow("Sistem Deteksi Pencurian Motor", annotated_resized_frame)
-        out.write(annotated_resized_frame)
-        if frame_count == reset_frame:
-            frame_count = 0
-        
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
+    if sistem_manajemen_motor.status_kemalingan and not alarm_playing:
+        alarm_playing = True
+        alarm_sound.play(loops=-1)
+        print('KEMALINGAN')
+    elif not sistem_manajemen_motor.status_kemalingan and alarm_playing:
+        alarm_playing = False
+        alarm_sound.stop()
+    
+    cv2.imshow("Sistem Deteksi Pencurian Motor", annotated_resized_frame)
+    # out.write(annotated_resized_frame)
+    if frame_count == reset_frame:
+        frame_count = 0
+    
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        break
         
 time.sleep(5)
 cap.release()
