@@ -1,23 +1,22 @@
 import cv2
 import pygame
 import torch
+import time 
+from paddleocr import PaddleOCR
 from variables import CLASS_MOTORCYCLE, CLASS_PERSON
 from variables import ASSET_PATH_ALARM
 from variables import VIDEO_MALAM, VIDEO_SIANG, aerox_malam, aerox_siang, beat_malam, beat_siang
-from modules.face_recognizer import FaceRecognizer
-from modules.lp_recognizer import LPRecognizer
-from modules.geometry import is_inside, intersection, transform_bbox
-from paddleocr import PaddleOCR
-from modules.cv2_draw import draw_rect, draw_text
 from classes.motor import MotorOnline
-from classes.roim import ROIMonitor
 from classes.orang import OrangOnline
-from modules.color import RED, GREEN, YELLOW
 from sysdata.kendaraan import authorized_vehicles, vehicle_nicknames
 from sysdata.wajah import authorized_faces
 from modules.deteksi import DeteksiYOLO, YOLOOutput
 from modules.tracker import TrackerUniversal
-import time 
+from modules.color import RED, GREEN, YELLOW
+from modules.face_recognizer import FaceRecognizer
+from modules.lp_recognizer import LPRecognizer
+from modules.cv2_draw import draw_rect, draw_text
+from modules.geometry import is_inside, intersection, transform_bbox
 
 VERBOSE = False
 MALAM = False
@@ -89,7 +88,6 @@ while cap.isOpened():
     
     #print(f"\n================ Frame ke-{frame_count} ================\n")
     frame_count += 1
-    roi_monitor_terdeteksi: list[ROIMonitor] = []
 
     if fps % 2 == 0:
         # DETEKSI ORANG 
@@ -119,61 +117,63 @@ while cap.isOpened():
                 if name is not None and conf is not None:
                     data_orang.set_identity(name)
                     cache_wajah_orang.update({id_orang: name})
-    # DETEKSI MOTOR 
-    prediksi_motor = pendeteksi_kendaraan.detect(resized_frame, classes=[1], conf_threshold=0.7)
-    tracker_motor.update(prediksi_motor)
     
-    # SISTEM PENGENALAN MOTOR
-    for id_motor, data_motor in tracker_motor.tracked_objects.items():
-        data_motor: MotorOnline = data_motor
-        x1m, y1m, x2m, y2m = data_motor.get_bbox()
-        every_x_f= int(fps/1.5)
-        if data_motor.license_plate_is_none() and frame_count % every_x_f == 0 and data_motor.is_ok_to_recognition():
-            if id_motor in cache_plat_nomor.keys():
-                data_motor.set_license_plate(cache_plat_nomor[id_motor])
-            else:
-                output_deteksi_plat = deteksi_plat.detect(resized_frame, 0.5, [0])
-                ocr_plat_success = False
-                if len(output_deteksi_plat) > 0:
-                    for plat in output_deteksi_plat:
-                        if is_inside(data_motor.get_bbox(), plat.bbox):
-                            MARGIN_PLAT = 0.025
-                            transformed_bbox = transform_bbox(
-                                plat.bbox,
-                                whr,
-                                (wo, ho),
-                                MARGIN_PLAT
-                            )
-                            roi_plat = original_frame[
-                                transformed_bbox[1]:transformed_bbox[3], 
-                                transformed_bbox[0]:transformed_bbox[2]]
-                            sharpened_roi = LPRecognizer.preprocessing_image(roi_plat)
-                            upscaled_roi = LPRecognizer.upscaled_image(roi_plat)
-                            ocr_paddle_result = LPRecognizer.ocr(upscaled_roi)
-                            plate_text_hasil_ocr = None
-                            if ocr_paddle_result and ocr_paddle_result[0] is not None:
-                                try:
-                                    plate_text_hasil_ocr = ocr_paddle_result[0][0][1][0]
-                                    print(f'[LPRecognizer] Motor #{id_motor}: {plate_text_hasil_ocr}')
-                                except:
-                                    plate_text_hasil_ocr = None
-                            if plate_text_hasil_ocr:
-                                data_motor.add_possibility_plate(plate_text_hasil_ocr)
-                                data_motor.add_recog_count()
-                                ocr_plat_success = True
-                    if not ocr_plat_success:
-                        print(f"[LPRecognizer] Motor ID {id_motor}: Tidak ada plat yang berhasil di-OCR & assign pada percobaan ini.")
-                else: 
-                    print(f"[LPRecognizer] Motor ID {id_motor}: Tidak ada deteksi plat dari YOLO pada percobaan ini.")
+    if fps % 1 == 0:
+        # DETEKSI MOTOR 
+        prediksi_motor = pendeteksi_kendaraan.detect(resized_frame, classes=[1], conf_threshold=0.7)
+        tracker_motor.update(prediksi_motor)
+        
+        # SISTEM PENGENALAN MOTOR
+        for id_motor, data_motor in tracker_motor.tracked_objects.items():
+            data_motor: MotorOnline = data_motor
+            x1m, y1m, x2m, y2m = data_motor.get_bbox()
+            every_x_f= int(fps/4)
+            if data_motor.license_plate_is_none() and frame_count % every_x_f == 0 and data_motor.is_ok_to_recognition():
+                if id_motor in cache_plat_nomor.keys():
+                    data_motor.set_license_plate(cache_plat_nomor[id_motor])
+                else:
+                    output_deteksi_plat = deteksi_plat.detect(resized_frame, 0.5, [0])
+                    ocr_plat_success = False
+                    if len(output_deteksi_plat) > 0:
+                        for plat in output_deteksi_plat:
+                            if is_inside(data_motor.get_bbox(), plat.bbox):
+                                MARGIN_PLAT = 0.025
+                                transformed_bbox = transform_bbox(
+                                    plat.bbox,
+                                    whr,
+                                    (wo, ho),
+                                    MARGIN_PLAT
+                                )
+                                roi_plat = original_frame[
+                                    transformed_bbox[1]:transformed_bbox[3], 
+                                    transformed_bbox[0]:transformed_bbox[2]]
+                                sharpened_roi = LPRecognizer.preprocessing_image(roi_plat)
+                                upscaled_roi = LPRecognizer.upscaled_image(roi_plat)
+                                ocr_paddle_result = LPRecognizer.ocr(upscaled_roi)
+                                plate_text_hasil_ocr = None
+                                if ocr_paddle_result and ocr_paddle_result[0] is not None:
+                                    try:
+                                        plate_text_hasil_ocr = ocr_paddle_result[0][0][1][0]
+                                        print(f'[LPRecognizer] Motor #{id_motor}: {plate_text_hasil_ocr}')
+                                    except:
+                                        plate_text_hasil_ocr = None
+                                if plate_text_hasil_ocr:
+                                    data_motor.add_possibility_plate(plate_text_hasil_ocr)
+                                    data_motor.add_recog_count()
+                                    ocr_plat_success = True
+                        if not ocr_plat_success:
+                            print(f"[LPRecognizer] Motor ID {id_motor}: Tidak ada plat yang berhasil di-OCR & assign pada percobaan ini.")
+                    else: 
+                        print(f"[LPRecognizer] Motor ID {id_motor}: Tidak ada deteksi plat dari YOLO pada percobaan ini.")
 
-        if data_motor.is_above_max_recog():
-            best_match, score = LPRecognizer.try_recognition(authorized_vehicles.keys(), data_motor.possibility_license_plates)
-            if best_match is None:
-                data_motor.reset_recog_count()
-                data_motor.max_recognition -= 2
-            else:
-                data_motor.set_license_plate(best_match)
-                cache_plat_nomor.update({id_motor: best_match})
+            if data_motor.is_above_max_recog():
+                best_match, score = LPRecognizer.try_recognition(authorized_vehicles.keys(), data_motor.possibility_license_plates)
+                if best_match is None:
+                    data_motor.reset_recog_count()
+                    data_motor.max_recognition -= 2
+                else:
+                    data_motor.set_license_plate(best_match)
+                    cache_plat_nomor.update({id_motor: best_match})
 
     # DETEKSI FALSE-POSITIVE MALING
     for data_motor in tracker_motor.tracked_objects.values():
