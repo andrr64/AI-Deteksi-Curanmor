@@ -8,7 +8,6 @@ from typing import List, Tuple, Type
 from modules.deteksi import YOLOOutput
 from variables import TRACKER_ARGS
 from variables import CLASS_MOTORCYCLE, TRACKER_ARGS, CLASS_ROI_MONITORING
-from classes.area_monitor import AreaMonitorOnline
 
 class TrackerUniversal:
     def __init__(self, fps: int, wh: Tuple[int, int], obj_class: Type, class_id: int):
