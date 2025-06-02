@@ -1,9 +1,6 @@
 numpy==1.26.1
-onnxruntime-gpu==1.16.3
+onnxruntime-gpu==1.15.1
 ultralytics==8.3.146
-torch==2.2.0 --index-url https://download.pytorch.org/whl/cu118
-torchvision==0.17.0  --index-url https://download.pytorch.org/whl/cu118
-torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu118
 paddlepaddle-gpu==2.6.2
 paddleocr==2.10.0
 pygame==2.6.1
@@ -21,3 +18,4 @@ motmetrics==1.4.0
 h5py==3.13.0
 pybind11==2.13.6
 six==1.17.0
+tensorrt==10.11.0.33
