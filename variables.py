@@ -4,11 +4,19 @@ buffalo_l_path = 'models/buffalo_l'
 
 def model_path_tensorrt(filename: str):
     return f'models/TensorRT/{filename}'
+def model_path_pytorch_YOLO(filename: str):
+    return f'models/YOLO-trained/{filename}'
 
 TENSOR_RT = {
     'orang': model_path_tensorrt('deteksi-orang-v2.engine'),
     'kendaraan': model_path_tensorrt('deteksi-kendaraan-v2.engine'),
     'plat': model_path_tensorrt('deteksi-plat-v2.engine')
+}
+
+YOLO_UN = {
+    'orang': model_path_pytorch_YOLO('deteksi-orang-v2.pt'),
+    'kendaraan': model_path_pytorch_YOLO('deteksi-kendaraan-v2.pt'),
+    'plat': model_path_pytorch_YOLO('deteksi-plat-v2.pt')
 }
 
 CLASS_MOTORCYCLE = 0xa1
@@ -40,7 +48,6 @@ VIDEO_SIANG = [
 
 aerox_malam = [
     {'pemilik': 'Andreas', 'maling': 'Shafiq', 'path': 'videos/aerox-malam/VID_20250529_180932155~2-andre-shafiq.mp4'},
-    {'pemilik': 'Andreas', 'maling': 'Randi', 'path': 'videos/aerox-malam/VID_20250529_181408115~2-andre-randi.mp4'},
     {'pemilik': 'Fajar', 'maling': 'Shafiq', 'path': 'videos/aerox-malam/VID_20250529_181543377~2-fajar-shafiq.mp4'},
     {'pemilik': 'Shafiq', 'maling': 'Andreas', 'path': 'videos/aerox-malam/VID_20250529_181737364~2-shafiq-andreas.mp4'}
 ]

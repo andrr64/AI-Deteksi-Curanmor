@@ -5,10 +5,13 @@ from paddleocr import PaddleOCR
 import re
 from modules.img_preprocessing import sharp_img
 from modules.upscale import API_upscale_frame
+import numpy as np
+import cv2
+from modules.deteksi import DeteksiYOLO
 
 class LPRecognizer:
     paddle_ocr = None
-    
+
     @staticmethod
     def init():
         LPRecognizer.paddle_ocr = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
@@ -27,8 +30,15 @@ class LPRecognizer:
 
     @staticmethod
     def preprocessing_image(frame):
-        sharpened = sharp_img(frame)
-        return sharpened
+        sharpen_kernel = np.array([
+            [-1, -1, -1],
+            [-1,  9, -1],
+            [-1, -1, -1]
+        ])
+        # Asumsikan input frame dalam format BGR
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        sharpened = cv2.filter2D(img_rgb, -1, sharpen_kernel)
+        return sharpened  # output dalam RGB
     
     @staticmethod
     def upscaled_image(frame):

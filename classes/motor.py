@@ -1,7 +1,7 @@
 from typing import Tuple
 from modules.kalman_filter import create_kalman, kalman_update
 import numpy as np
-MAX_RECOGNITION = 5
+MAX_RECOGNITION = 6
 
 class MotorOnline:
     def __init__(self, id_motor, x1y1, x2y2):
@@ -28,16 +28,11 @@ class MotorOnline:
         plate = self.license_plate if not self.license_plate_is_none() else 'Unknown'
         return f'Motor #{self.id_motor} | {plate}'
     
-    def substract_max_recog(self):
-        self.max_recognition -= 2
-        if self.max_recognition < 0:
-            self.max_recognition = 0
-    
     def is_ok_to_recognition(self):
         return self.recognition_count < self.max_recognition
     
     def is_above_max_recog(self):
-        return self.recognition_count >= self.max_recognition
+        return self.recognition_count >= self.max_recognition and self.max_recognition > 0
     
     def license_plate_is_none(self) -> bool:
         return self.license_plate is None

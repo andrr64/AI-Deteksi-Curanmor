@@ -14,8 +14,8 @@ class TrackerUniversal:
         self.tracked_objects: dict[int, object] = {}
         self.tracker = BYTETracker(TRACKER_ARGS, frame_rate=fps)
         self.wh = wh
-        self.obj_class = obj_class        # contoh: MotorOnline atau OrangOnline
-        self.class_id = class_id          # contoh: CLASS_MOTORCYCLE atau CLASS_PERSON
+        self.obj_class = obj_class
+        self.class_id = class_id
     
     def reset_tracked(self):
         self.tracked_objects: dict[int, object] = {}

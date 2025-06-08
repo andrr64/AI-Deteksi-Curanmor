@@ -8,7 +8,7 @@ class OrangOnline:
         self.x1y1 = x1y1
         self.x2y2 = x2y2
         self.recognition_count = 0
-        self.name = ''
+        self.name = None
 
         # Inisialisasi Kalman Filter untuk orang ini
         self.kalman_filter = create_kalman()
@@ -18,7 +18,7 @@ class OrangOnline:
         self.name = name
         
     def is_unknown(self) -> bool:
-        return self.name is ''
+        return self.name is None
 
     def add_recog_count(self):
         self.recognition_count += 1

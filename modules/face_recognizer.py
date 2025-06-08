@@ -16,6 +16,7 @@ class FaceRecognizer:
         self.app.prepare(ctx_id=ctx_id)
         self.database = {}
         self.face_length = 0
+        
     def reset_db(self):
         self.database = {}
         self.face_length = 0
@@ -47,7 +48,6 @@ class FaceRecognizer:
         for nama, data in self.database.items():
             db_embedding = self._normalize(data[0].embedding)
             score = float(embedding @ db_embedding.T)  # Cosine similarity karena sudah dinormalisasi
-            print(f'[FaceRecognizer] Score untuk {nama}: {score:.2f}')
             if score > best_score:
                 best_score = score
                 best_match = nama
